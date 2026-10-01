@@ -68,10 +68,10 @@ type ErrorParams struct {
 // sits in the implementation-defined -32000..-32099 server range.
 const codeFacadeBindFailed = -32010
 
-// servedOnHeader exposes the stable host UUID of the candidate that actually
+// servedByHeader exposes the stable host UUID of the candidate that actually
 // committed the proxied response. Set only after failover has settled so the
 // client sees the same execution identity recorded in workload scheduledOn.
-const servedOnHeader = "X-NVPAIR-Served-On"
+const servedByHeader = "X-PAIR-Served-By"
 
 type NodesResult struct {
 	Nodes []Node `json:"nodes"`
@@ -1771,7 +1771,7 @@ func (f *facade) handleHTTP(w http.ResponseWriter, r *http.Request) {
 				servedTarget = cand.url.Host
 				// Override any upstream value with the authoritative PAIR node ID.
 				// ReverseProxy copies these headers to the client after ModifyResponse.
-				resp.Header.Set(servedOnHeader, cand.id)
+				resp.Header.Set(servedByHeader, cand.id)
 				proxyErr = "" // clear any error recorded from a failed-over candidate
 				// Arm the liveness report only now. statusCapture also carries
 				// the proxy's OWN error bodies — ReverseProxy's ErrorHandler
