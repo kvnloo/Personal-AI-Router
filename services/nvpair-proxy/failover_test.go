@@ -378,11 +378,15 @@ func TestHandleHTTP_ServedByHeaderInferenceOnly(t *testing.T) {
 
 		inference := httptest.NewRecorder()
 		p.soleFacade().handleHTTP(inference, tc.inferenceRequest())
-		require.Equal(t, "served", inference.Header().Get(servedByHeader))
+		if got := inference.Header().Get(servedByHeader); got != "served" {
+			t.Fatalf("%s = %q, want %q", servedByHeader, got, "served")
+		}
 
 		control := httptest.NewRecorder()
 		p.soleFacade().handleHTTP(control, httptest.NewRequest(http.MethodGet, tc.nonInferencePath, nil))
-		require.Empty(t, control.Header().Get(servedByHeader))
+		if got := control.Header().Get(servedByHeader); got != "" {
+			t.Fatalf("%s = %q on control request, want absent", servedByHeader, got)
+		}
 	})
 }
 
