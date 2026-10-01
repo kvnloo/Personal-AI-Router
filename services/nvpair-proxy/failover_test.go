@@ -232,8 +232,8 @@ func TestHandleHTTP_HappyPathSingleNode(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on success", got)
 		}
-		if got := rec.Header().Get(servedOnHeader); got != "good" {
-			t.Errorf("%s = %q, want committed node %q", servedOnHeader, got, "good")
+		if got := rec.Header().Get(servedByHeader); got != "good" {
+			t.Errorf("%s = %q, want committed node %q", servedByHeader, got, "good")
 		}
 	})
 }
@@ -285,8 +285,8 @@ func TestHandleHTTP_RejectionHasNoCORS(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on rejection", got)
 		}
-		if got := rec.Header().Get(servedOnHeader); got != "" {
-			t.Errorf("%s = %q, want absent when no upstream committed", servedOnHeader, got)
+		if got := rec.Header().Get(servedByHeader); got != "" {
+			t.Errorf("%s = %q, want absent when no upstream committed", servedByHeader, got)
 		}
 	})
 }
@@ -328,8 +328,8 @@ func TestHandleHTTP_FailoverOn503(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on proxied success", got)
 		}
-		if got := rec.Header().Get(servedOnHeader); got != "good" {
-			t.Errorf("%s = %q, want successful failover node %q", servedOnHeader, got, "good")
+		if got := rec.Header().Get(servedByHeader); got != "good" {
+			t.Errorf("%s = %q, want successful failover node %q", servedByHeader, got, "good")
 		}
 	})
 }
