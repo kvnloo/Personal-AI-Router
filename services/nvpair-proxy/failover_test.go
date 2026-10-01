@@ -363,6 +363,29 @@ func TestHandleHTTP_AllNodesDownReturnsError(t *testing.T) {
 	})
 }
 
+func TestHandleHTTP_ServedByHeaderInferenceOnly(t *testing.T) {
+	forEachEngine(t, func(t *testing.T, tc engineCase) {
+		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set(servedByHeader, "spoofed")
+			w.WriteHeader(http.StatusOK)
+			_, _ = io.WriteString(w, `{"ok":true}`)
+		}))
+		defer upstream.Close()
+
+		disc := NewDiscovery()
+		disc.AddManual(nodeForModel(t, "served", upstream.URL, tc.advertisedModel))
+		p := testProxy(tc.profile, disc, tc.profile.FacadePort)
+
+		inference := httptest.NewRecorder()
+		p.soleFacade().handleHTTP(inference, tc.inferenceRequest())
+		require.Equal(t, "served", inference.Header().Get(servedByHeader))
+
+		control := httptest.NewRecorder()
+		p.soleFacade().handleHTTP(control, httptest.NewRequest(http.MethodGet, tc.nonInferencePath, nil))
+		require.Empty(t, control.Header().Get(servedByHeader))
+	})
+}
+
 // TestHandleHTTP_404FailoverInferenceOnly: a 404 (model-not-found) on an
 // inference call fails over to the next advertised owner, but a 404 on a
 // non-inference path is returned as-is.
