@@ -1769,9 +1769,12 @@ func (f *facade) handleHTTP(w http.ResponseWriter, r *http.Request) {
 				ttfbMs = time.Since(start).Milliseconds()
 				servedNodeID = cand.id
 				servedTarget = cand.url.Host
-				// Override any upstream value with the authoritative PAIR node ID.
-				// ReverseProxy copies these headers to the client after ModifyResponse.
-				resp.Header.Set(servedByHeader, cand.id)
+				// The public serving-node contract is for inference responses.
+				// Keep control endpoints unchanged, and override any upstream spoofed
+				// value only when PAIR owns this response header.
+				if isInf {
+					resp.Header.Set(servedByHeader, cand.id)
+				}
 				proxyErr = "" // clear any error recorded from a failed-over candidate
 				// Arm the liveness report only now. statusCapture also carries
 				// the proxy's OWN error bodies — ReverseProxy's ErrorHandler
