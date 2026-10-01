@@ -671,6 +671,10 @@ func TestPreviouslyAdoptedForeignReplacementFailsClosed(t *testing.T) {
 // engine started without an executor process handle. Uninstall must reconcile
 // and reclaim that exact managed image before deleting it.
 func TestUninstallTerminatesRunningInstance(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("managed-image reclamation intentionally declines when procImage cannot verify the executable")
+	}
+
 	baseDir := t.TempDir()
 	bin := filepath.Join(baseDir, "fake", "fakeu"+strconv.Itoa(os.Getpid())+exeExt())
 	if err := os.MkdirAll(filepath.Dir(bin), 0o755); err != nil {
