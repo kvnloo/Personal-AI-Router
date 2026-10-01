@@ -232,6 +232,9 @@ func TestHandleHTTP_HappyPathSingleNode(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on success", got)
 		}
+		if got := rec.Header().Get(servedByHeader); got != "good" {
+			t.Errorf("%s = %q, want committed node %q", servedByHeader, got, "good")
+		}
 	})
 }
 
@@ -282,6 +285,9 @@ func TestHandleHTTP_RejectionHasNoCORS(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on rejection", got)
 		}
+		if got := rec.Header().Get(servedByHeader); got != "" {
+			t.Errorf("%s = %q, want absent when no upstream committed", servedByHeader, got)
+		}
 	})
 }
 
@@ -322,6 +328,9 @@ func TestHandleHTTP_FailoverOn503(t *testing.T) {
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on proxied success", got)
 		}
+		if got := rec.Header().Get(servedByHeader); got != "good" {
+			t.Errorf("%s = %q, want successful failover node %q", servedByHeader, got, "good")
+		}
 	})
 }
 
@@ -350,6 +359,33 @@ func TestHandleHTTP_AllNodesDownReturnsError(t *testing.T) {
 		}
 		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 			t.Errorf("Access-Control-Allow-Origin = %q, want no CORS header on exhausted error", got)
+		}
+	})
+}
+
+func TestHandleHTTP_ServedByHeaderInferenceOnly(t *testing.T) {
+	forEachEngine(t, func(t *testing.T, tc engineCase) {
+		upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set(servedByHeader, "spoofed")
+			w.WriteHeader(http.StatusOK)
+			_, _ = io.WriteString(w, `{"ok":true}`)
+		}))
+		defer upstream.Close()
+
+		disc := NewDiscovery()
+		disc.AddManual(nodeForModel(t, "served", upstream.URL, tc.advertisedModel))
+		p := testProxy(tc.profile, disc, tc.profile.FacadePort)
+
+		inference := httptest.NewRecorder()
+		p.soleFacade().handleHTTP(inference, tc.inferenceRequest())
+		if got := inference.Header().Get(servedByHeader); got != "served" {
+			t.Fatalf("%s = %q, want %q", servedByHeader, got, "served")
+		}
+
+		control := httptest.NewRecorder()
+		p.soleFacade().handleHTTP(control, httptest.NewRequest(http.MethodGet, tc.nonInferencePath, nil))
+		if got := control.Header().Get(servedByHeader); got != "" {
+			t.Fatalf("%s = %q on control request, want absent", servedByHeader, got)
 		}
 	})
 }
